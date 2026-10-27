@@ -39,7 +39,7 @@ Add the package in Xcode (File → Add Package Dependencies…) or in `Package.s
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/0xbrssgn/BRSRetro.git", from: "0.1.0"),
+    .package(url: "https://github.com/brssgn/BRSRetro.git", from: "0.1.0"),
 ],
 targets: [
     .target(
