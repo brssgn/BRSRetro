@@ -75,7 +75,22 @@ public struct RetroBackgroundView: View {
     }
 }
 
+extension EnvironmentValues {
+    /// Upper bound on the frames per second the animations render at.
+    ///
+    /// Defaults to 60, which halves GPU work on 120 Hz ProMotion displays
+    /// without a visible difference for background art. Set `0` for no cap.
+    @Entry public var retroMaxFrameRate: Double = 60
+}
+
 extension View {
+    /// Caps the frame rate of every retro animation in this view hierarchy.
+    /// Pass `120` to use the full refresh rate of ProMotion displays, or `0`
+    /// for no cap.
+    public func retroMaxFrameRate(_ framesPerSecond: Double) -> some View {
+        environment(\.retroMaxFrameRate, framesPerSecond)
+    }
+
     /// Places a built-in retro animation behind this view. The view expands to
     /// fill the space it is offered and the animation extends under the safe
     /// area, so a bare `Text` ends up centered on a full-screen background.

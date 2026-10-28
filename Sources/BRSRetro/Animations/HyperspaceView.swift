@@ -105,7 +105,12 @@ final class StarfieldSimulation {
 
     /// Moves every star toward the camera by `velocity × dt` in depth units.
     func step(to time: TimeInterval, velocity: Double) {
-        let dt = min(max(time - (lastTime ?? time), 0), 0.1)
+        guard let previous = lastTime, time >= previous else {
+            // First frame, or the clock was reset: start counting from here.
+            lastTime = time
+            return
+        }
+        let dt = min(time - previous, 0.1)
         lastTime = time
         guard dt > 0 else { return }
 

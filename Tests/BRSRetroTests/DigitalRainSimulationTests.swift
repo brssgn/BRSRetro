@@ -50,6 +50,20 @@ struct DigitalRainSimulationTests {
         }
     }
 
+    @Test("A clock that jumps backwards restarts counting instead of freezing")
+    func clockReset() {
+        let sim = DigitalRainSimulation()
+        sim.configure(columns: 4, rows: 100, density: 1, seed: 1)
+        sim.step(to: 0)
+        sim.step(to: 30)
+        sim.step(to: 1)          // a parent re-render reset the time origin
+        let before = sim.columns
+        sim.step(to: 1.05)
+        for (old, new) in zip(before, sim.columns) {
+            #expect(abs(new.head - (old.head + old.speed * 0.05)) < 1e-9)
+        }
+    }
+
     @Test("Columns respawn above the top once their tail leaves the bottom")
     func respawn() {
         let sim = DigitalRainSimulation()

@@ -1,23 +1,28 @@
 import SwiftUI
 
-/// Shared timeline handling so every animation honors Reduce Motion the same way.
+/// Shared timeline handling so every animation behaves the same way.
 ///
-/// When the user has Reduce Motion enabled the timeline is paused, which
-/// leaves a still frame of the animation in place rather than removing it.
+/// - Pauses under Reduce Motion, leaving a still frame in place.
+/// - Pauses while the scene is in the background.
+/// - Caps the frame rate to ``SwiftUI/EnvironmentValues/retroMaxFrameRate``.
+/// - Keeps its time origin in `@State`, so a parent re-rendering the view
+///   does not reset the animation phase.
 struct RetroTimeline<Content: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.retroMaxFrameRate) private var maxFrameRate
 
-    private let start: Date
+    @State private var start = Date()
     private let content: (TimeInterval) -> Content
 
     /// - Parameter content: Receives the seconds elapsed since the view appeared.
     init(@ViewBuilder content: @escaping (TimeInterval) -> Content) {
-        self.start = Date()
         self.content = content
     }
 
     var body: some View {
-        TimelineView(.animation(paused: reduceMotion)) { context in
+        let interval: TimeInterval? = maxFrameRate > 0 && maxFrameRate.isFinite ? 1 / maxFrameRate : nil
+        TimelineView(.animation(minimumInterval: interval, paused: reduceMotion || scenePhase == .background)) { context in
             content(context.date.timeIntervalSince(start))
         }
     }

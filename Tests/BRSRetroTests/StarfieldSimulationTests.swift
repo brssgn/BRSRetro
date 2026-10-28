@@ -61,6 +61,23 @@ struct StarfieldSimulationTests {
         }
     }
 
+    @Test("A clock that jumps backwards restarts counting instead of freezing")
+    func clockReset() {
+        let sim = StarfieldSimulation()
+        sim.configure(count: 50, seed: 11)
+        sim.step(to: 0, velocity: 1)
+        sim.step(to: 30, velocity: 1)
+        sim.step(to: 1, velocity: 1)
+        let before = sim.stars
+        sim.step(to: 1.05, velocity: 1)
+        var moved = 0
+        for (old, new) in zip(before, sim.stars) where new.z != 1 {
+            #expect(abs(new.z - (old.z - 0.03)) < 1e-9)
+            moved += 1
+        }
+        #expect(moved > 0)
+    }
+
     @Test("Same seed gives the same sky")
     func deterministic() {
         let a = StarfieldSimulation()

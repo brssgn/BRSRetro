@@ -97,8 +97,29 @@ like a bezel.
 `CRTOverlayView` is the cheap alternative: a transparent layer of scanlines and
 vignette you stack on top of any background in a `ZStack`.
 
-All views fill the space they are given, ignore touches, and pause when the
-system Reduce Motion setting is on (a still frame stays in place).
+All views fill the space they are given, ignore touches, pause when the
+system Reduce Motion setting is on (a still frame stays in place) and while
+the scene is in the background.
+
+## Performance
+
+- Animations render at most 60 frames per second by default, which halves the
+  GPU work on 120 Hz ProMotion displays. Raise or remove the cap per hierarchy:
+
+  ```swift
+  ContentView()
+      .retroMaxFrameRate(120)   // 0 means no cap
+  ```
+
+- The shader views are a single full-screen pass each. `.crtOverlay()` adds a
+  second pass that samples the content beneath it. SwiftUI does not expose a
+  way to render a layer effect at reduced resolution, so if you need more
+  headroom, apply the overlay to a smaller subtree or lower `scanlines` and
+  `noise`.
+- `DigitalRainView` draws from Canvas symbols that SwiftUI rasterizes once,
+  so steady-state frames allocate nothing per glyph.
+- The animation clock lives in view state, so parent views can update as often
+  as they like without restarting the effect.
 
 `RetroPalette` holds the neon colors the defaults use, so custom tweaks stay
 on-theme.

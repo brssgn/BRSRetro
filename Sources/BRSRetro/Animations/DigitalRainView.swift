@@ -45,6 +45,16 @@ public struct DigitalRainView: View {
                 simulation.configure(columns: columns, rows: rows, density: density, seed: seed)
                 simulation.step(to: elapsed * speed)
                 draw(simulation, in: &context, cell: cell, rows: rows)
+            } symbols: {
+                // One white glyph per symbol. SwiftUI rasterizes these once and
+                // caches them; the draw loop only tints and places them.
+                let font = Font.system(size: fontSize, design: .monospaced).weight(.medium)
+                ForEach(0..<DigitalRainSimulation.glyphs.count, id: \.self) { index in
+                    Text(String(DigitalRainSimulation.glyphs[index]))
+                        .font(font)
+                        .foregroundStyle(.white)
+                        .tag(index)
+                }
             }
             .background(backgroundColor)
         }
@@ -52,13 +62,7 @@ public struct DigitalRainView: View {
     }
 
     private func draw(_ sim: DigitalRainSimulation, in context: inout GraphicsContext, cell: CGSize, rows: Int) {
-        let font = Font.system(size: fontSize, design: .monospaced).weight(.medium)
-        let trail = DigitalRainSimulation.glyphs.map { glyph in
-            context.resolve(Text(String(glyph)).font(font).foregroundStyle(color))
-        }
-        let heads = DigitalRainSimulation.glyphs.map { glyph in
-            context.resolve(Text(String(glyph)).font(font).foregroundStyle(headColor))
-        }
+        let glyphs = (0..<DigitalRainSimulation.glyphs.count).map { context.resolveSymbol(id: $0) }
 
         for (columnIndex, column) in sim.columns.enumerated() where column.active {
             let head = Int(column.head.rounded(.down))
@@ -73,14 +77,17 @@ public struct DigitalRainView: View {
                 let glyphIndex = column.glyphs[row % column.glyphs.count]
                 let point = CGPoint(x: x, y: (Double(row) + 0.5) * cell.height)
 
+                guard let glyph = glyphs[glyphIndex] else { continue }
+
                 var layer = context
                 if age == 0 {
+                    layer.addFilter(.colorMultiply(headColor))
                     layer.addFilter(.shadow(color: headColor.opacity(0.9), radius: fontSize * 0.5))
-                    layer.draw(heads[glyphIndex], at: point)
                 } else {
+                    layer.addFilter(.colorMultiply(color))
                     layer.opacity = pow(fade, 1.5)
-                    layer.draw(trail[glyphIndex], at: point)
                 }
+                layer.draw(glyph, at: point)
             }
         }
     }
@@ -134,7 +141,12 @@ final class DigitalRainSimulation {
     /// Advances the simulation to `time` seconds. Steps larger than 100 ms are
     /// clamped so a backgrounded app does not jump when it resumes.
     func step(to time: TimeInterval) {
-        let dt = min(max(time - (lastTime ?? time), 0), 0.1)
+        guard let previous = lastTime, time >= previous else {
+            // First frame, or the clock was reset: start counting from here.
+            lastTime = time
+            return
+        }
+        let dt = min(time - previous, 0.1)
         lastTime = time
         guard dt > 0 else { return }
 
